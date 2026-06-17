@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard en Check</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .fila-error {
+            background-color: #fef2f2 !important;
+            animation: parpadeoAlerta 2s infinite alternate;
+        }
+        @keyframes parpadeoAlerta {
+            0% { background-color: #fef2f2; }
+            100% { background-color: #fee2e2; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <header class="bg-slate-900 text-white shadow-lg py-4 px-6 sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2.5 rounded-xl text-white">
+                    <i class="fa-solid fa-chart-pie text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Análisis & Monitoreo</h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Historial de las solicitudes de códigos mediante el aplicativo
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <span id="statusBadge" class="bg-slate-800 text-slate-300 px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-2 border border-slate-700">
+                    <i class="fa-solid fa-rotate animate-spin"></i> Conectando...
+                </span>
+                <a href="https://krlosandresino.github.io/check-order/" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Panel de Solicitudes
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div class="space-y-1">
+                    <p class="text-sm text-slate-500 font-medium">Pendientes en Cola</p>
+                    <h3 id="kpiPendientes" class="text-3xl font-bold text-amber-600">0</h3>
+                    <p class="text-xs text-slate-400">Esperando entrega física</p>
+                </div>
+                <div class="p-3.5 bg-amber-50 text-amber-600 rounded-xl">
+                    <i class="fa-solid fa-clock text-2xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div class="space-y-1">
+                    <p class="text-sm text-slate-500 font-medium">Unidades Totales</p>
+                    <h3 id="kpiUnidades" class="text-3xl font-bold text-slate-900">0</h3>
+                    <p class="text-xs text-slate-400">Solicitadas en el día</p>
+                </div>
+                <div class="p-3.5 bg-blue-50 text-blue-600 rounded-xl">
+                    <i class="fa-solid fa-calculator text-2xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div class="space-y-1">
+                    <p class="text-sm text-slate-500 font-medium">Ubicación Más Pedida</p>
+                    <h3 id="kpiTopUbicacion" class="text-2xl font-bold text-slate-900 truncate max-w-[180px]">Ninguna</h3>
+                    <p id="kpiTopUbicacionConteo" class="text-xs text-slate-400 font-semibold text-emerald-600">0 unidades</p>
+                </div>
+                <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                    <i class="fa-solid fa-map-location-dot text-2xl"></i>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div class="space-y-1">
+                    <p class="text-sm text-slate-500 font-medium">Operador Más Activo</p>
+                    <h3 id="kpiTopOperador" class="text-2xl font-bold text-slate-900 truncate max-w-[180px]">Ninguno</h3>
+                    <p id="kpiTopOperadorConteo" class="text-xs text-slate-400">0 solicitudes hechas</p>
+                </div>
+                <div class="p-3.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                    <i class="fa-solid fa-user-gear text-2xl"></i>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <div>
+                        <h4 class="font-bold text-slate-900">Ubicaciones con más errores (Top 5)</h4>
+                        <p class="text-xs text-slate-400">Suma total de unidades retiradas</p>
+                    </div>
+                    <span class="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-md">Acumulado</span>
+                </div>
+                <div class="relative flex-grow min-h-[300px] flex items-center justify-center">
+                    <canvas id="chartUbicaciones"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                    <div>
+                        <h4 class="font-bold text-slate-900">Productos Más Solicitados (Top 6)</h4>
+                        <p class="text-xs text-slate-400">Porcentaje de participación por código</p>
+                    </div>
+                    <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-md">Artículos</span>
+                </div>
+                <div class="relative flex-grow min-h-[300px] flex items-center justify-center">
+                    <canvas id="chartCodigos"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            
+            <div class="p-5 border-b border-slate-100 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h4 class="font-bold text-slate-900">Registro de Actividad Completo</h4>
+                        <p class="text-xs text-slate-400">Muestra todas las solicitudes del turno y su estado actual de entrega</p>
+                    </div>
+                    
+                    <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                        <button onclick="cambiarFiltroEstado('todos')" id="btnFiltro-todos" class="px-3 py-1.5 rounded-lg bg-white text-slate-800 shadow-sm transition">
+                            Todos (<span id="countFiltro-todos">0</span>)
+                        </button>
+                        <button onclick="cambiarFiltroEstado('pendiente')" id="btnFiltro-pendiente" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                            Pendientes (<span id="countFiltro-pendiente">0</span>)
+                        </button>
+                        <button onclick="cambiarFiltroEstado('entregado')" id="btnFiltro-entregado" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                            Entregados (<span id="countFiltro-entregado">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                    <div class="relative flex-1 min-w-[240px]">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                        </span>
+                        <input type="text" id="buscadorTabla" onkeyup="filtrarTabla()" placeholder="Buscar por Operador, Código o Ubicación..." class="pl-9 pr-4 py-2 w-full text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-slate-50 transition">
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto max-h-[550px] overflow-y-auto border-b border-slate-100">
+                <table class="w-full text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-50 z-10 shadow-[0_1px_0_0_rgba(241,245,249,1)]">
+                        <tr class="bg-slate-50 border-b border-slate-100 text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                            <th class="py-4 px-6 bg-slate-50">Estado</th>
+                            <th class="py-4 px-6 bg-slate-50">Operador</th>
+                            <th class="py-4 px-6 bg-slate-50">Código</th>
+                            <th class="py-4 px-6 bg-slate-50">Ubicación</th>
+                            <th class="py-4 px-6 text-center bg-slate-50">Unidades</th>
+                            <th class="py-4 px-6 bg-slate-50">Fecha/Hora de Pedido</th>
+                            <th class="py-4 px-6 text-center bg-slate-50">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaDashboardCuerpo" class="divide-y divide-slate-100 text-sm">
+                        <tr>
+                            <td colspan="7" class="py-10 text-center text-slate-400">
+                                <i class="fa-solid fa-rotate animate-spin text-xl mr-2"></i> Cargando base de datos histórica...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-100 py-6 px-6 mt-12 text-center text-xs text-slate-400">
+        <p>© 2026 Dashboard Analítico - Desarrollado por Carlos Burgos.</p>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, orderBy, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCzZFPcSUPwWYIe4w3IW7pDluIchGMqWoU",
+            authDomain: "inventario-web-57600.firebaseapp.com",
+            projectId: "inventario-web-57600",
+            storageBucket: "inventario-web-57600.firebasestorage.app",
+            messagingSenderId: "918058389127",
+            appId: "1:918058389127:web:5d86be464e3d80d992b222"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Referencias a colecciones
+        const colRegistros = collection(db, "registros"); // Pendientes
+        const colHistorial = collection(db, "historial_total"); // Todos
+
+        // Elementos de la interfaz
+        const statusBadge = document.getElementById("statusBadge");
+        const kpiPendientes = document.getElementById("kpiPendientes");
+        const kpiUnidades = document.getElementById("kpiUnidades");
+        const kpiTopUbicacion = document.getElementById("kpiTopUbicacion");
+        const kpiTopUbicacionConteo = document.getElementById("kpiTopUbicacionConteo");
+        const kpiTopOperador = document.getElementById("kpiTopOperador");
+        const kpiTopOperadorConteo = document.getElementById("kpiTopOperadorConteo");
+        const tablaCuerpo = document.getElementById("tablaDashboardCuerpo");
+
+        // Contadores de filtros
+        const countFiltroTodos = document.getElementById("countFiltro-todos");
+        const countFiltroPendiente = document.getElementById("countFiltro-pendiente");
+        const countFiltroEntregado = document.getElementById("countFiltro-entregado");
+
+        // Estado del filtro
+        let filtroEstadoActual = "todos"; // todos, pendiente, entregado
+
+        // Variables de datos en tiempo real
+        let registrosActivos = []; // Lo que está físicamente en "registros" (Pendiente)
+        let historialTotal = [];    // Lo que está físicamente en "historial_total" (Todo)
+
+        // Instancias de gráficos
+        let chartUbicacionesInstance = null;
+        let chartCodigosInstance = null;
+
+        const chartColors = [
+            'rgba(59, 130, 246, 0.85)',   // Blue
+            'rgba(16, 185, 129, 0.85)',   // Emerald
+            'rgba(245, 158, 11, 0.85)',   // Amber
+            'rgba(99, 102, 241, 0.85)',   // Indigo
+            'rgba(236, 72, 153, 0.85)',   // Pink
+            'rgba(14, 165, 233, 0.85)',   // Sky
+            'rgba(168, 85, 247, 0.85)'    // Purple
+        ];
+        const borderColors = [
+            'rgb(59, 130, 246)',
+            'rgb(16, 185, 129)',
+            'rgb(245, 158, 11)',
+            'rgb(99, 102, 241)',
+            'rgb(236, 72, 153)',
+            'rgb(14, 165, 233)',
+            'rgb(168, 85, 247)'
+        ];
+
+        // Escucha en tiempo real para pendientes
+        onSnapshot(query(colRegistros, orderBy("timestamp", "desc")), (snapPendientes) => {
+            registrosActivos = snapPendientes.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            statusBadge.className = "bg-emerald-100 text-emerald-800 px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 border border-emerald-200";
+            statusBadge.innerHTML = `<i class="fa-solid fa-circle text-[8px] animate-pulse"></i> Sincronizado`;
+            actualizarDashboard();
+        }, (error) => {
+            console.error("Error al leer pendientes:", error);
+            statusBadge.className = "bg-red-100 text-red-800 px-3.5 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 border border-red-200";
+            statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Error`;
+        });
+
+        // Escucha en tiempo real para historial acumulado
+        onSnapshot(query(colHistorial, orderBy("timestamp", "desc")), (snapHistorial) => {
+            historialTotal = snapHistorial.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            actualizarDashboard();
+        }, (error) => {
+            console.error("Error al leer historial:", error);
+        });
+
+        // Función global asignada a window para poder eliminar desde el HTML de la tabla
+        window.eliminarRegistroIndividual = async (idDocumento) => {
+            if (confirm("¿Estás seguro de que deseas eliminar permanentemente este registro del historial? Se recalcularán las métricas de inmediato.")) {
+                try {
+                    const docRef = doc(db, "historial_total", idDocumento);
+                    await deleteDoc(docRef);
+                } catch (error) {
+                    alert("Error al intentar eliminar el registro: " + error.message);
+                }
+            }
+        };
+
+        // Función Principal de Procesamiento y Renderizado
+        function actualizarDashboard() {
+            // 1. KPI Pendientes (Suma directa de lo que hay en registros activos)
+            kpiPendientes.innerText = registrosActivos.length;
+
+            if (historialTotal.length === 0) {
+                tablaCuerpo.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-database text-3xl mb-2 block text-slate-300"></i> No hay datos registrados en el historial total de este turno.
+                        </td>
+                    </tr>`;
+                kpiUnidades.innerText = "0";
+                kpiTopUbicacion.innerText = "Ninguna";
+                kpiTopUbicacionConteo.innerText = "0 unidades";
+                kpiTopOperador.innerText = "Ninguno";
+                kpiTopOperadorConteo.innerText = "0 solicitudes";
+                countFiltroTodos.innerText = "0";
+                countFiltroPendiente.innerText = "0";
+                countFiltroEntregado.innerText = "0";
+                limpiarGraficos();
+                return;
+            }
+
+            // Crear una copia de registros pendientes para identificar qué historicos siguen activos
+            let poolPendientes = [...registrosActivos];
+
+            let sumaTotalUnidades = 0;
+            const unidadesPorUbicacion = {};
+            const unidadesPorCodigo = {};
+            const conteoOperadores = {};
+
+            let totalPendientesCount = 0;
+            let totalEntregadosCount = 0;
+
+            // Procesar cada elemento del historial histórico
+            const itemsProcesados = historialTotal.map(item => {
+                const nombre = (item.nombre || "").toUpperCase().trim();
+                const codigo = (item.codigo || "").trim();
+                const ubicacion = (item.ubicacion || "").trim();
+                const cantidad = parseInt(item.cantidad) || 0;
+
+                // KPI acumulativos generales
+                sumaTotalUnidades += cantidad;
+
+                // Acumulación para Gráfico de Ubicaciones (Solo válidas)
+                if (ubicacion && ubicacion !== "No encontrado") {
+                    unidadesPorUbicacion[ubicacion] = (unidadesPorUbicacion[ubicacion] || 0) + cantidad;
+                }
+
+                // Acumulación para Gráfico de Códigos
+                if (codigo) {
+                    // AQUÍ SE ELIMINÓ EL REGISTRO REPETIDO QUE HACÍA DAÑO EN TU ORIGINAL
+                    unidadesPorCodigo[codigo] = (unidadesPorCodigo[codigo] || 0) + cantidad;
+                }
+
+                // Acumulación de actividad de Operadores
+                if (nombre) {
+                    conteoOperadores[nombre] = (conteoOperadores[nombre] || 0) + 1;
+                }
+
+                // Determinar si sigue pendiente comparando con la cola activa
+                // Coincidencia inteligente: Nombre, Código y Cantidad deben coincidir
+                const indexMatch = poolPendientes.findIndex(p => 
+                    (p.nombre || "").toUpperCase().trim() === nombre &&
+                    (p.codigo || "").trim() === codigo &&
+                    parseInt(p.cantidad) === cantidad
+                );
+
+                let estado = "Entregado";
+                if (indexMatch !== -1) {
+                    estado = "Pendiente";
+                    totalPendientesCount++;
+                    // Removemos del pool para evitar que duplicados se vinculen al mismo pendiente
+                    poolPendientes.splice(indexMatch, 1);
+                } else {
+                    totalEntregadosCount++;
+                }
+
+                return {
+                    ...item,
+                    nombre,
+                    codigo,
+                    ubicacion,
+                    cantidad,
+                    estado
+                };
+            });
+
+            // Actualizar Contadores de Filtros en la Interfaz
+            countFiltroTodos.innerText = itemsProcesados.length;
+            countFiltroPendiente.innerText = totalPendientesCount;
+            countFiltroEntregado.innerText = totalEntregadosCount;
+
+            // Actualizar KPI Unidades
+            kpiUnidades.innerText = sumaTotalUnidades;
+
+            // Encontrar Ubicación Más Pedida (Mayor volumen de unidades en historial)
+            const listUbicaciones = Object.keys(unidadesPorUbicacion);
+            if (listUbicaciones.length > 0) {
+                const topUbi = listUbicaciones.reduce((a, b) => unidadesPorUbicacion[a] > unidadesPorUbicacion[b] ? a : b);
+                kpiTopUbicacion.innerText = topUbi;
+                kpiTopUbicacionConteo.innerText = `${unidadesPorUbicacion[topUbi]} unidades extraídas`;
+            } else {
+                kpiTopUbicacion.innerText = "Ninguna";
+                kpiTopUbicacionConteo.innerText = "0 unidades";
+            }
+
+            // Encontrar Operador Más Activo (Mayor volumen de pedidos hechos)
+            const listOperadores = Object.keys(conteoOperadores);
+            if (listOperadores.length > 0) {
+                const topOp = listOperadores.reduce((a, b) => conteoOperadores[a] > conteoOperadores[b] ? a : b);
+                kpiTopOperador.innerText = topOp;
+                kpiTopOperadorConteo.innerText = `${conteoOperadores[topOp]} pedidos realizados`;
+            } else {
+                kpiTopOperador.innerText = "Ninguno";
+                kpiTopOperadorConteo.innerText = "0 solicitudes";
+            }
+
+            // Renderizar la lista física aplicando el filtro de estado actual
+            renderizarTabla(itemsProcesados);
+
+            // Renderizar y actualizar los gráficos dinámicos
+            actualizarGraficos(unidadesPorUbicacion, unidadesPorCodigo);
+        }
+
+        // Renderiza la tabla física respetando el estado de filtro elegido
+        function renderizarTabla(items) {
+            let htmlHTML = "";
+
+            const itemsFiltrados = items.filter(item => {
+                if (filtroEstadoActual === "todos") return true;
+                return item.estado.toLowerCase() === filtroEstadoActual.toLowerCase();
+            });
+
+            if (itemsFiltrados.length === 0) {
+                tablaCuerpo.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-slate-400">
+                            No hay registros que coincidan con el estado "${filtroEstadoActual}".
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            itemsFiltrados.forEach(item => {
+                const fecha = item.timestamp ? item.timestamp.toDate().toLocaleString() : "...";
+                const esError = item.ubicacion === "No encontrado";
+                
+                // Clase de fila si es una alerta crítica
+                const claseFila = esError ? 'fila-error hover:bg-red-100/40' : 'hover:bg-slate-50/80';
+                
+                // Badge de Ubicación
+                const badgeUbiClase = esError 
+                    ? 'bg-red-100 text-red-800 border border-red-200' 
+                    : 'bg-amber-100 text-amber-800 border border-amber-200';
+
+                // Badge de Estado
+                let badgeEstadoHtml = "";
+                if (item.estado === "Pendiente") {
+                    badgeEstadoHtml = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-xs font-bold inline-flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Pendiente
+                    </span>`;
+                } else {
+                    badgeEstadoHtml = `<span class="bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full text-xs font-semibold inline-flex items-center gap-1">
+                        <i class="fa-solid fa-check text-[10px]"></i> Entregado
+                    </span>`;
+                }
+
+                htmlHTML += `
+                    <tr class="${claseFila} transition duration-150">
+                        <td class="py-4 px-6">${badgeEstadoHtml}</td>
+                        <td class="py-4 px-6 font-semibold text-slate-900">${item.nombre || "SIN OPERADOR"}</td>
+                        <td class="py-4 px-6 font-mono text-xs font-bold text-slate-600">
+                            <span class="bg-slate-100 px-2 py-1 rounded border border-slate-200">${item.codigo}</span>
+                        </td>
+                        <td class="py-4 px-6">
+                            <span class="${badgeUbiClase} px-3 py-1 rounded-full text-xs font-bold tracking-wide">
+                                <i class="${esError ? 'fa-solid fa-triangle-exclamation mr-1' : 'fa-solid fa-location-dot mr-1'}"></i>${item.ubicacion}
+                            </span>
+                        </td>
+                        <td class="py-4 px-6 text-center">
+                            <span class="bg-blue-50 text-blue-800 px-2.5 py-1 rounded-md font-bold text-xs">${item.cantidad}</span>
+                        </td>
+                        <td class="py-4 px-6 text-xs text-slate-400 font-mono">${fecha}</td>
+                        <td class="py-4 px-6 text-center">
+                            <button onclick="window.eliminarRegistroIndividual('${item.id}')" class="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition" title="Eliminar error de solicitud">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tablaCuerpo.innerHTML = htmlHTML;
+            filtrarTabla(); // Aplicar filtro de búsqueda de texto si hay algo escrito
+        }
+
+        // Lógica de Renderizado de Gráficos (Chart.js)
+        function actualizarGraficos(unidadesUbi, unidadesCod) {
+            // A. Top 5 Ubicaciones por unidades
+            const ubiOrdenadas = Object.keys(unidadesUbi)
+                .map(key => ({ ubi: key, total: unidadesUbi[key] }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
+
+            const labelsUbi = ubiOrdenadas.map(x => x.ubi);
+            const dataUbi = ubiOrdenadas.map(x => x.total);
+
+            const ctxUbi = document.getElementById('chartUbicaciones').getContext('2d');
+            if (chartUbicacionesInstance) {
+                chartUbicacionesInstance.data.labels = labelsUbi;
+                chartUbicacionesInstance.data.datasets[0].data = dataUbi;
+                chartUbicacionesInstance.update();
+            } else {
+                chartUbicacionesInstance = new Chart(ctxUbi, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsUbi,
+                        datasets: [{
+                            label: 'Unidades extraídas',
+                            data: dataUbi,
+                            backgroundColor: chartColors.slice(0, 5),
+                            borderColor: borderColors.slice(0, 5),
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            // B. Top 6 Códigos por unidades
+            const codOrdenados = Object.keys(unidadesCod)
+                .map(key => ({ cod: key, total: unidadesCod[key] }))
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 6);
+
+            const labelsCod = codOrdenados.map(x => `Código: ${x.cod}`);
+            const dataCod = codOrdenados.map(x => x.total);
+
+            const ctxCod = document.getElementById('chartCodigos').getContext('2d');
+            if (chartCodigosInstance) {
+                chartCodigosInstance.data.labels = labelsCod;
+                chartCodigosInstance.data.datasets[0].data = dataCod;
+                chartCodigosInstance.update();
+            } else {
+                chartCodigosInstance = new Chart(ctxCod, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labelsCod,
+                        datasets: [{
+                            data: dataCod,
+                            backgroundColor: chartColors,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { boxWidth: 10, font: { size: 11 } }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
+            }
+        }
+
+        // Limpieza total de gráficos en caso de reset
+        function limpiarGraficos() {
+            if (chartUbicacionesInstance) {
+                chartUbicacionesInstance.destroy();
+                chartUbicacionesInstance = null;
+            }
+            if (chartCodigosInstance) {
+                chartCodigosInstance.destroy();
+                chartCodigosInstance = null;
+            }
+        }
+
+        // Filtro por Estado (Pestañas superiores)
+        window.cambiarFiltroEstado = (estado) => {
+            filtroEstadoActual = estado;
+
+            // Actualizar estilo visual de los botones de filtro
+            const filtros = ["todos", "pendiente", "entregado"];
+            filtros.forEach(f => {
+                const btn = document.getElementById(`btnFiltro-${f}`);
+                if (f === estado) {
+                    btn.className = "px-3 py-1.5 rounded-lg bg-white text-slate-800 shadow-sm transition";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+                }
+            });
+
+            // Re-procesar la tabla física
+            actualizarDashboard();
+        };
+
+        // Buscador de Texto General
+        window.filtrarTabla = () => {
+            const input = document.getElementById("buscadorTabla");
+            const filtro = input.value.toLowerCase().trim();
+            const filas = tablaCuerpo.getElementsByTagName("tr");
+
+            for (let i = 0; i < filas.length; i++) {
+                if (filas[i].cells.length < 5) continue; // Saltear filas de estado vacío
+                
+                const celdaOperador = filas[i].cells[1].textContent || "";
+                const celdaCodigo = filas[i].cells[2].textContent || "";
+                const celdaUbicacion = filas[i].cells[3].textContent || "";
+
+                if (
+                    celdaOperador.toLowerCase().indexOf(filtro) > -1 || 
+                    celdaCodigo.toLowerCase().indexOf(filtro) > -1 || 
+                    celdaUbicacion.toLowerCase().indexOf(filtro) > -1
+                ) {
+                    filas[i].style.display = "";
+                } else {
+                    filas[i].style.display = "none";
+                }
+            }
+        };
+    </script>
+</body>
+</html>
