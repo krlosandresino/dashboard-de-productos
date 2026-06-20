@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         .fila-error {
             background-color: #fef2f2 !important;
@@ -17,6 +18,18 @@
             100% { background-color: #fee2e2; }
         }
     </style>
+    <script>
+        // Scripts de seguridad obligatorios para protección de código
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C')) || 
+                (e.ctrlKey && (e.key === 'U' || e.key === 'S'))) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
 
@@ -46,87 +59,97 @@
         </div>
     </header>
 
-    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6 space-y-4">
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="flex justify-end pr-2">
+            <button onclick="copiarDashboardAlPortapapeles()" class="bg-white hover:bg-slate-100 text-slate-700 shadow-sm border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95">
+                <i id="iconoCopiar" class="fa-solid fa-copy text-blue-600"></i> <span id="textoCopiar">Copiar Reporte</span>
+            </button>
+        </div>
+
+        <div id="contenedorCaptura" class="space-y-6 bg-slate-50 p-4 rounded-2xl block style-render-clean" style="overflow: visible !important;">
             
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div class="space-y-1">
-                    <p class="text-sm text-slate-500 font-medium">Pendientes en Cola</p>
-                    <h3 id="kpiPendientes" class="text-3xl font-bold text-amber-600">0</h3>
-                    <p class="text-xs text-slate-400">Esperando entrega física</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between min-w-0">
+                    <div class="space-y-1 min-w-0 flex-1">
+                        <p class="text-sm text-slate-500 font-medium whitespace-nowrap">Pendientes en Cola</p>
+                        <h3 id="kpiPendientes" class="text-3xl font-bold text-amber-600 leading-normal h-10 flex items-center">0</h3>
+                        <p class="text-xs text-slate-400 whitespace-nowrap">Esperando entrega física</p>
+                    </div>
+                    <div class="p-3.5 bg-amber-50 text-amber-600 rounded-xl ml-2 flex-shrink-0">
+                        <i class="fa-solid fa-clock text-2xl"></i>
+                    </div>
                 </div>
-                <div class="p-3.5 bg-amber-50 text-amber-600 rounded-xl">
-                    <i class="fa-solid fa-clock text-2xl"></i>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between min-w-0">
+                    <div class="space-y-1 min-w-0 flex-1">
+                        <p class="text-sm text-slate-500 font-medium whitespace-nowrap">Unidades Totales</p>
+                        <h3 id="kpiUnidades" class="text-3xl font-bold text-slate-900 leading-normal h-10 flex items-center">0</h3>
+                        <p class="text-xs text-slate-400 whitespace-nowrap">Solicitadas en el día</p>
+                    </div>
+                    <div class="p-3.5 bg-blue-50 text-blue-600 rounded-xl ml-2 flex-shrink-0">
+                        <i class="fa-solid fa-calculator text-2xl"></i>
+                    </div>
                 </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between min-w-0">
+                    <div class="space-y-1 min-w-0 flex-1">
+                        <p class="text-sm text-slate-500 font-medium whitespace-nowrap">Ubicación Más Pedida</p>
+                        <h3 id="kpiTopUbicacion" class="text-2xl font-bold text-slate-900 leading-normal h-10 flex items-center tracking-tight overflow-visible">Ninguna</h3>
+                        <p id="kpiTopUbicacionConteo" class="text-xs text-slate-400 font-semibold text-emerald-600 whitespace-nowrap">0 unidades</p>
+                    </div>
+                    <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl ml-2 flex-shrink-0">
+                        <i class="fa-solid fa-map-location-dot text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between min-w-0">
+                    <div class="space-y-1 min-w-0 flex-1">
+                        <p class="text-sm text-slate-500 font-medium whitespace-nowrap">Operador Más Activo</p>
+                        <h3 id="kpiTopOperador" class="text-2xl font-bold text-slate-900 leading-normal h-10 flex items-center tracking-tight overflow-visible">Ninguno</h3>
+                        <p id="kpiTopOperadorConteo" class="text-xs text-slate-400 whitespace-nowrap">0 solicitudes hechas</p>
+                    </div>
+                    <div class="p-3.5 bg-indigo-50 text-indigo-600 rounded-xl ml-2 flex-shrink-0">
+                        <i class="fa-solid fa-user-gear text-2xl"></i>
+                    </div>
+                </div>
+
             </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div class="space-y-1">
-                    <p class="text-sm text-slate-500 font-medium">Unidades Totales</p>
-                    <h3 id="kpiUnidades" class="text-3xl font-bold text-slate-900">0</h3>
-                    <p class="text-xs text-slate-400">Solicitadas en el día</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                        <div>
+                            <h4 class="font-bold text-slate-900">Ubicaciones con más errores (Top 5)</h4>
+                            <p class="text-xs text-slate-400">Suma total de unidades retiradas</p>
+                        </div>
+                        <span class="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-md">Acumulado</span>
+                    </div>
+                    <div class="relative flex-grow min-h-[300px] flex items-center justify-center">
+                        <canvas id="chartUbicaciones"></canvas>
+                    </div>
                 </div>
-                <div class="p-3.5 bg-blue-50 text-blue-600 rounded-xl">
-                    <i class="fa-solid fa-calculator text-2xl"></i>
-                </div>
-            </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div class="space-y-1">
-                    <p class="text-sm text-slate-500 font-medium">Ubicación Más Pedida</p>
-                    <h3 id="kpiTopUbicacion" class="text-2xl font-bold text-slate-900 truncate max-w-[180px]">Ninguna</h3>
-                    <p id="kpiTopUbicacionConteo" class="text-xs text-slate-400 font-semibold text-emerald-600">0 unidades</p>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                        <div>
+                            <h4 class="font-bold text-slate-900">Productos Más Solicitados (Top 6)</h4>
+                            <p class="text-xs text-slate-400">Porcentaje de participación por código</p>
+                        </div>
+                        <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-md">Artículos</span>
+                    </div>
+                    <div class="relative flex-grow min-h-[300px] flex items-center justify-center">
+                        <canvas id="chartCodigos"></canvas>
+                    </div>
                 </div>
-                <div class="p-3.5 bg-emerald-50 text-emerald-600 rounded-xl">
-                    <i class="fa-solid fa-map-location-dot text-2xl"></i>
-                </div>
-            </div>
 
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
-                <div class="space-y-1">
-                    <p class="text-sm text-slate-500 font-medium">Operador Más Activo</p>
-                    <h3 id="kpiTopOperador" class="text-2xl font-bold text-slate-900 truncate max-w-[180px]">Ninguno</h3>
-                    <p id="kpiTopOperadorConteo" class="text-xs text-slate-400">0 solicitudes hechas</p>
-                </div>
-                <div class="p-3.5 bg-indigo-50 text-indigo-600 rounded-xl">
-                    <i class="fa-solid fa-user-gear text-2xl"></i>
-                </div>
             </div>
 
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                    <div>
-                        <h4 class="font-bold text-slate-900">Ubicaciones con más errores (Top 5)</h4>
-                        <p class="text-xs text-slate-400">Suma total de unidades retiradas</p>
-                    </div>
-                    <span class="bg-blue-50 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-md">Acumulado</span>
-                </div>
-                <div class="relative flex-grow min-h-[300px] flex items-center justify-center">
-                    <canvas id="chartUbicaciones"></canvas>
-                </div>
-            </div>
-
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                    <div>
-                        <h4 class="font-bold text-slate-900">Productos Más Solicitados (Top 6)</h4>
-                        <p class="text-xs text-slate-400">Porcentaje de participación por código</p>
-                    </div>
-                    <span class="bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-1 rounded-md">Artículos</span>
-                </div>
-                <div class="relative flex-grow min-h-[300px] flex items-center justify-center">
-                    <canvas id="chartCodigos"></canvas>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mt-6">
             
             <div class="p-5 border-b border-slate-100 space-y-4">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -188,6 +211,49 @@
         <p>© 2026 Dashboard Analítico - Desarrollado por Carlos Burgos.</p>
     </footer>
 
+    <script type="text/javascript">
+        // Lógica de renderizado limpia sin alterar dimensiones de cajas del dashboard
+        async function copiarDashboardAlPortapapeles() {
+            const contenedor = document.getElementById("contenedorCaptura");
+            const btnTexto = document.getElementById("textoCopiar");
+            const btnIcono = document.getElementById("iconoCopiar");
+
+            btnTexto.innerText = "Capturando...";
+
+            // Opciones de renderizado estable de html2canvas
+            html2canvas(contenedor, {
+                backgroundColor: "#f8fafc",
+                scale: 2, 
+                logging: false,
+                useCORS: true,
+                allowTaint: true,
+                windowWidth: contenedor.scrollWidth,
+                windowHeight: contenedor.scrollHeight
+            }).then(canvas => {
+                canvas.toBlob(async (blob) => {
+                    try {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ "image/png": blob })
+                        ]);
+                        btnTexto.innerText = "¡Copiado!";
+                        btnIcono.className = "fa-solid fa-check text-emerald-600";
+                        
+                        setTimeout(() => {
+                            btnTexto.innerText = "Copiar Reporte";
+                            btnIcono.className = "fa-solid fa-copy text-blue-600";
+                        }, 2500);
+                    } catch (err) {
+                        console.error("Error al copiar imagen:", err);
+                        btnTexto.innerText = "Error al copiar";
+                        setTimeout(() => {
+                            btnTexto.innerText = "Copiar Reporte";
+                        }, 2000);
+                    }
+                }, "image/png");
+            });
+        }
+    </script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, orderBy, query, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
@@ -204,11 +270,9 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Referencias a colecciones
-        const colRegistros = collection(db, "registros"); // Pendientes
-        const colHistorial = collection(db, "historial_total"); // Todos
+        const colRegistros = collection(db, "registros");
+        const colHistorial = collection(db, "historial_total");
 
-        // Elementos de la interfaz
         const statusBadge = document.getElementById("statusBadge");
         const kpiPendientes = document.getElementById("kpiPendientes");
         const kpiUnidades = document.getElementById("kpiUnidades");
@@ -218,30 +282,25 @@
         const kpiTopOperadorConteo = document.getElementById("kpiTopOperadorConteo");
         const tablaCuerpo = document.getElementById("tablaDashboardCuerpo");
 
-        // Contadores de filtros
         const countFiltroTodos = document.getElementById("countFiltro-todos");
         const countFiltroPendiente = document.getElementById("countFiltro-pendiente");
         const countFiltroEntregado = document.getElementById("countFiltro-entregado");
 
-        // Estado del filtro
-        let filtroEstadoActual = "todos"; // todos, pendiente, entregado
+        let filtroEstadoActual = "todos";
+        let registrosActivos = [];
+        let historialTotal = [];
 
-        // Variables de datos en tiempo real
-        let registrosActivos = []; // Lo que está físicamente en "registros" (Pendiente)
-        let historialTotal = [];    // Lo que está físicamente en "historial_total" (Todo)
-
-        // Instancias de gráficos
         let chartUbicacionesInstance = null;
         let chartCodigosInstance = null;
 
         const chartColors = [
-            'rgba(59, 130, 246, 0.85)',   // Blue
-            'rgba(16, 185, 129, 0.85)',   // Emerald
-            'rgba(245, 158, 11, 0.85)',   // Amber
-            'rgba(99, 102, 241, 0.85)',   // Indigo
-            'rgba(236, 72, 153, 0.85)',   // Pink
-            'rgba(14, 165, 233, 0.85)',   // Sky
-            'rgba(168, 85, 247, 0.85)'    // Purple
+            'rgba(59, 130, 246, 0.85)',
+            'rgba(16, 185, 129, 0.85)',
+            'rgba(245, 158, 11, 0.85)',
+            'rgba(99, 102, 241, 0.85)',
+            'rgba(236, 72, 153, 0.85)',
+            'rgba(14, 165, 233, 0.85)',
+            'rgba(168, 85, 247, 0.85)'
         ];
         const borderColors = [
             'rgb(59, 130, 246)',
@@ -253,7 +312,6 @@
             'rgb(168, 85, 247)'
         ];
 
-        // Escucha en tiempo real para pendientes
         onSnapshot(query(colRegistros, orderBy("timestamp", "desc")), (snapPendientes) => {
             registrosActivos = snapPendientes.docs.map(doc => ({
                 id: doc.id,
@@ -268,7 +326,6 @@
             statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Error`;
         });
 
-        // Escucha en tiempo real para historial acumulado
         onSnapshot(query(colHistorial, orderBy("timestamp", "desc")), (snapHistorial) => {
             historialTotal = snapHistorial.docs.map(doc => ({
                 id: doc.id,
@@ -279,7 +336,6 @@
             console.error("Error al leer historial:", error);
         });
 
-        // Función global asignada a window para poder eliminar desde el HTML de la tabla
         window.eliminarRegistroIndividual = async (idDocumento) => {
             if (confirm("¿Estás seguro de que deseas eliminar permanentemente este registro del historial? Se recalcularán las métricas de inmediato.")) {
                 try {
@@ -291,9 +347,7 @@
             }
         };
 
-        // Función Principal de Procesamiento y Renderizado
         function actualizarDashboard() {
-            // 1. KPI Pendientes (Suma directa de lo que hay en registros activos)
             kpiPendientes.innerText = registrosActivos.length;
 
             if (historialTotal.length === 0) {
@@ -315,8 +369,8 @@
                 return;
             }
 
-            // Crear una copia de registros pendientes para identificar qué historicos siguen activos
             let poolPendientes = [...registrosActivos];
+            let poolPendientesFiltro = [...registrosActivos];
 
             let sumaTotalUnidades = 0;
             const unidadesPorUbicacion = {};
@@ -326,34 +380,47 @@
             let totalPendientesCount = 0;
             let totalEntregadosCount = 0;
 
-            // Procesar cada elemento del historial histórico
+            // Primer barrido para calcular contadores de estado exactos
+            historialTotal.forEach(item => {
+                const nombre = (item.nombre || "").toUpperCase().trim();
+                const codigo = (item.codigo || "").trim();
+                const cantidad = parseInt(item.cantidad) || 0;
+
+                const indexMatchFiltro = poolPendientesFiltro.findIndex(p => 
+                    (p.nombre || "").toUpperCase().trim() === nombre &&
+                    (p.codigo || "").trim() === codigo &&
+                    parseInt(p.cantidad) === cantidad
+                );
+
+                if (indexMatchFiltro !== -1) {
+                    totalPendientesCount++;
+                    poolPendientesFiltro.splice(indexMatchFiltro, 1);
+                } else {
+                    totalEntregadosCount++;
+                }
+            });
+
+            // Segundo barrido de mapeo y KPIs globales
             const itemsProcesados = historialTotal.map(item => {
                 const nombre = (item.nombre || "").toUpperCase().trim();
                 const codigo = (item.codigo || "").trim();
                 const ubicacion = (item.ubicacion || "").trim();
                 const cantidad = parseInt(item.cantidad) || 0;
 
-                // KPI acumulativos generales
                 sumaTotalUnidades += cantidad;
 
-                // Acumulación para Gráfico de Ubicaciones (Solo válidas)
                 if (ubicacion && ubicacion !== "No encontrado") {
                     unidadesPorUbicacion[ubicacion] = (unidadesPorUbicacion[ubicacion] || 0) + cantidad;
                 }
 
-                // Acumulación para Gráfico de Códigos
                 if (codigo) {
-                    // AQUÍ SE ELIMINÓ EL REGISTRO REPETIDO QUE HACÍA DAÑO EN TU ORIGINAL
                     unidadesPorCodigo[codigo] = (unidadesPorCodigo[codigo] || 0) + cantidad;
                 }
 
-                // Acumulación de actividad de Operadores
                 if (nombre) {
                     conteoOperadores[nombre] = (conteoOperadores[nombre] || 0) + 1;
                 }
 
-                // Determinar si sigue pendiente comparando con la cola activa
-                // Coincidencia inteligente: Nombre, Código y Cantidad deben coincidir
                 const indexMatch = poolPendientes.findIndex(p => 
                     (p.nombre || "").toUpperCase().trim() === nombre &&
                     (p.codigo || "").trim() === codigo &&
@@ -363,11 +430,7 @@
                 let estado = "Entregado";
                 if (indexMatch !== -1) {
                     estado = "Pendiente";
-                    totalPendientesCount++;
-                    // Removemos del pool para evitar que duplicados se vinculen al mismo pendiente
                     poolPendientes.splice(indexMatch, 1);
-                } else {
-                    totalEntregadosCount++;
                 }
 
                 return {
@@ -380,44 +443,36 @@
                 };
             });
 
-            // Actualizar Contadores de Filtros en la Interfaz
             countFiltroTodos.innerText = itemsProcesados.length;
             countFiltroPendiente.innerText = totalPendientesCount;
             countFiltroEntregado.innerText = totalEntregadosCount;
 
-            // Actualizar KPI Unidades
             kpiUnidades.innerText = sumaTotalUnidades;
 
-            // Encontrar Ubicación Más Pedida (Mayor volumen de unidades en historial)
             const listUbicaciones = Object.keys(unidadesPorUbicacion);
             if (listUbicaciones.length > 0) {
                 const topUbi = listUbicaciones.reduce((a, b) => unidadesPorUbicacion[a] > unidadesPorUbicacion[b] ? a : b);
                 kpiTopUbicacion.innerText = topUbi;
-                kpiTopUbicacionConteo.innerText = `${unidadesPorUbicacion[topUbi]} unidades extraídas`;
+                kpiTopUbicacionConteo.innerText = `${unidadesPorUbicacion[topUbi]} u. extraídas`;
             } else {
                 kpiTopUbicacion.innerText = "Ninguna";
                 kpiTopUbicacionConteo.innerText = "0 unidades";
             }
 
-            // Encontrar Operador Más Activo (Mayor volumen de pedidos hechos)
             const listOperadores = Object.keys(conteoOperadores);
             if (listOperadores.length > 0) {
                 const topOp = listOperadores.reduce((a, b) => conteoOperadores[a] > conteoOperadores[b] ? a : b);
                 kpiTopOperador.innerText = topOp;
-                kpiTopOperadorConteo.innerText = `${conteoOperadores[topOp]} pedidos realizados`;
+                kpiTopOperadorConteo.innerText = `${conteoOperadores[topOp]} solicitudes`;
             } else {
                 kpiTopOperador.innerText = "Ninguno";
                 kpiTopOperadorConteo.innerText = "0 solicitudes";
             }
 
-            // Renderizar la lista física aplicando el filtro de estado actual
             renderizarTabla(itemsProcesados);
-
-            // Renderizar y actualizar los gráficos dinámicos
             actualizarGraficos(unidadesPorUbicacion, unidadesPorCodigo);
         }
 
-        // Renderiza la tabla física respetando el estado de filtro elegido
         function renderizarTabla(items) {
             let htmlHTML = "";
 
@@ -440,15 +495,12 @@
                 const fecha = item.timestamp ? item.timestamp.toDate().toLocaleString() : "...";
                 const esError = item.ubicacion === "No encontrado";
                 
-                // Clase de fila si es una alerta crítica
                 const claseFila = esError ? 'fila-error hover:bg-red-100/40' : 'hover:bg-slate-50/80';
                 
-                // Badge de Ubicación
                 const badgeUbiClase = esError 
                     ? 'bg-red-100 text-red-800 border border-red-200' 
                     : 'bg-amber-100 text-amber-800 border border-amber-200';
 
-                // Badge de Estado
                 let badgeEstadoHtml = "";
                 if (item.estado === "Pendiente") {
                     badgeEstadoHtml = `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-xs font-bold inline-flex items-center gap-1">
@@ -486,12 +538,10 @@
             });
 
             tablaCuerpo.innerHTML = htmlHTML;
-            filtrarTabla(); // Aplicar filtro de búsqueda de texto si hay algo escrito
+            filtrarTabla(); 
         }
 
-        // Lógica de Renderizado de Gráficos (Chart.js)
         function actualizarGraficos(unidadesUbi, unidadesCod) {
-            // A. Top 5 Ubicaciones por unidades
             const ubiOrdenadas = Object.keys(unidadesUbi)
                 .map(key => ({ ubi: key, total: unidadesUbi[key] }))
                 .sort((a, b) => b.total - a.total)
@@ -531,13 +581,12 @@
                 });
             }
 
-            // B. Top 6 Códigos por unidades
             const codOrdenados = Object.keys(unidadesCod)
                 .map(key => ({ cod: key, total: unidadesCod[key] }))
                 .sort((a, b) => b.total - a.total)
                 .slice(0, 6);
 
-            const labelsCod = codOrdenados.map(x => `Código: ${x.cod}`);
+            const labelsCod = codOrdenados.map(x => `Cod: ${x.cod}`);
             const dataCod = codOrdenados.map(x => x.total);
 
             const ctxCod = document.getElementById('chartCodigos').getContext('2d');
@@ -573,7 +622,6 @@
             }
         }
 
-        // Limpieza total de gráficos en caso de reset
         function limpiarGraficos() {
             if (chartUbicacionesInstance) {
                 chartUbicacionesInstance.destroy();
@@ -585,11 +633,9 @@
             }
         }
 
-        // Filtro por Estado (Pestañas superiores)
         window.cambiarFiltroEstado = (estado) => {
             filtroEstadoActual = estado;
 
-            // Actualizar estilo visual de los botones de filtro
             const filtros = ["todos", "pendiente", "entregado"];
             filtros.forEach(f => {
                 const btn = document.getElementById(`btnFiltro-${f}`);
@@ -600,18 +646,16 @@
                 }
             });
 
-            // Re-procesar la tabla física
             actualizarDashboard();
         };
 
-        // Buscador de Texto General
         window.filtrarTabla = () => {
             const input = document.getElementById("buscadorTabla");
             const filtro = input.value.toLowerCase().trim();
             const filas = tablaCuerpo.getElementsByTagName("tr");
 
             for (let i = 0; i < filas.length; i++) {
-                if (filas[i].cells.length < 5) continue; // Saltear filas de estado vacío
+                if (filas[i].cells.length < 5) continue; 
                 
                 const celdaOperador = filas[i].cells[1].textContent || "";
                 const celdaCodigo = filas[i].cells[2].textContent || "";
