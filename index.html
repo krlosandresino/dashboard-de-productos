@@ -453,7 +453,7 @@
             if (listUbicaciones.length > 0) {
                 const topUbi = listUbicaciones.reduce((a, b) => unidadesPorUbicacion[a] > unidadesPorUbicacion[b] ? a : b);
                 kpiTopUbicacion.innerText = topUbi;
-                kpiTopUbicacionConteo.innerText = `${unidadesPorUbicacion[topUbi]} u. extraídas`;
+                kpiTopUbicacionConteo.innerText = `${unidadesPorUbicacion[topUbi]} unidades extraídas`;
             } else {
                 kpiTopUbicacion.innerText = "Ninguna";
                 kpiTopUbicacionConteo.innerText = "0 unidades";
